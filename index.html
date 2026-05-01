@@ -129,20 +129,20 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            transition: all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+            transition: all cubic-bezier(0.34, 1.2, 0.64, 1);
         }
 
         /* Animation classes */
         .image-fly-left {
-            animation: flyToLeft 0.4s ease-in forwards !important;
+            animation: flyToLeft 0.5s ease-in forwards !important;
         }
         
         .image-fly-right {
-            animation: flyToRight 0.4s ease-in forwards !important;
+            animation: flyToRight 0.5s ease-in forwards !important;
         }
         
         .image-fly-down {
-            animation: flyToDown 0.4s ease-in forwards !important;
+            animation: flyToDown 0.5s ease-in forwards !important;
         }
 
         @keyframes flyToLeft {
@@ -265,12 +265,14 @@
     // ===== PING MEASUREMENT SYSTEM =====
     
     const images = [
-        "ENDFIELD_SHARE_1769195189.png", 
-        "ENDFIELD_SHARE_1775980257.png", 
-        "ENDFIELD_SHARE_1775980489.png",
+        "1.webp",
+        "2.webp",
+        "3.webp",
+        "4.webp",
+        "5.webp",
     ];
 
-    const folderPath = "/images/";
+    const folderPath = "./images/";
     const kicawkicawmania = new Audio('./audio/kicau.ogg');
     
     let scoreLeft = 0;
