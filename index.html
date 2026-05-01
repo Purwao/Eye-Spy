@@ -271,6 +271,7 @@
     ];
 
     const folderPath = "/images/";
+    const kicawkicawmania = new Audio('./audio/kicau.ogg');
     
     let scoreLeft = 0;
     let scoreRight = 0;
@@ -407,6 +408,7 @@
             currArray = pending;
         } else {
             console.warn("No images left! Game Over");
+            kicawkicawmania.play();
             return false;
         }
         
@@ -553,6 +555,7 @@
             }
         } else {
             console.log("Game Over!");
+            
             // alert(`Game Complete!\nLeft: ${scoreLeft} | Right: ${scoreRight}`);
         }
     });
