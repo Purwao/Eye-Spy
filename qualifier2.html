@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EyeSpy</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f0f0;
+            font-family: monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 140px 1fr 140px;
+            gap: 1.5rem;
+            max-width: 1200px;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .receiver {
+            background: #fafaf7;
+            border: 3px solid #000;
+            padding: 1.5rem;
+            box-shadow: 10px 10px 0 #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ping-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #fff;
+            border: 2px solid #000;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            font-family: monospace;
+            z-index: 10;
+        }
+
+        .ping-good { background: #4CAF50; color: white; }
+        .ping-medium { background: #FF9800; color: white; }
+        .ping-bad { background: #f44336; color: white; }
+        .ping-measuring { background: #9E9E9E; color: white; }
+
+        .title {
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid #000;
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .score-sidebar {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 3px solid #000;
+            color: #fff;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .left-team { background: #e32a2a; box-shadow: -6px 8px 0 #000; }
+        .right-team { background: #0055ff; box-shadow: 6px 8px 0 #000; }
+
+        .score-label {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .score-value {
+            font-size: 3.5rem;
+            display: block;
+        }
+
+        .display-container {
+            background: #fff;
+            border: 3px solid #000;
+            flex-grow: 1;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #random-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: all cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        .image-fly-left {
+            animation: flyToLeft 0.5s ease-in forwards !important;
+        }
+        
+        .image-fly-right {
+            animation: flyToRight 0.5s ease-in forwards !important;
+        }
+        
+        .image-fly-down {
+            animation: flyToDown 0.5s ease-in forwards !important;
+        }
+
+        @keyframes flyToLeft {
+            0% { transform: translateX(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(-300px) rotate(-15deg); opacity: 0; }
+        }
+
+        @keyframes flyToRight {
+            0% { transform: translateX(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(300px) rotate(15deg); opacity: 0; }
+        }
+
+        @keyframes flyToDown {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(200px) rotate(10deg); opacity: 0; }
+        }
+
+        .image-enter {
+            animation: imageEnter 0.3s ease-out forwards !important;
+        }
+
+        @keyframes imageEnter {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .score-pop {
+            animation: scorePop 0.3s ease-out;
+        }
+
+        @keyframes scorePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* Timer styles */
+        .timer-bar {
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .timer-display {
+            font-weight: 900;
+            font-size: 1.6rem;
+            letter-spacing: 0.05em;
+            min-width: 70px;
+            text-align: right;
+            transition: color 0.3s;
+        }
+
+        .timer-display.warning { color: #e32a2a; }
+
+        .timer-track {
+            flex: 1;
+            height: 10px;
+            background: #e0e0e0;
+            border: 2px solid #000;
+            overflow: hidden;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: #000;
+            transition: width 1s linear, background 0.3s;
+            width: 100%;
+        }
+
+        .timer-fill.warning { background: #e32a2a; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @media (max-width: 768px) {
+            .game-container { grid-template-columns: 1fr; }
+            .score-sidebar { flex-direction: row; justify-content: space-around; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="game-container">
+    
+    <div class="score-sidebar left-team">
+        <div class="score-label">LEFT<br>TEAM<br>(←)</div>
+        <span id="score-left" class="score-value">0</span>
+    </div>
+
+    <div class="receiver">
+        <div class="title">
+            <span>Eye Spy</span>
+            <span style="font-size: 0.8rem;">Member Gathering</span>
+        </div>
+        <div class="ping-indicator" id="ping-display">
+            📡 PING: --ms
+        </div>
+
+        <div class="display-container">
+            <img id="random-image" src="" alt="Loading Asset...">
+        </div>
+        
+        <!-- Timer replacing arrow keys hint -->
+        <div class="timer-bar">
+            <div class="timer-display" id="timer-display">05:00</div>
+            <div class="timer-track">
+                <div class="timer-fill" id="timer-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="score-sidebar right-team">
+        <div class="score-label">RIGHT<br>TEAM<br>(→)</div>
+        <span id="score-right" class="score-value">0</span>
+    </div>
+
+</div>
+
+<script>
+    // ===== PING MEASUREMENT SYSTEM =====
+    
+    const images = [
+        "14.webp",
+        "15.webp",
+        "16.webp",
+        "17.webp",
+        "18.webp",
+        "19.webp",
+        "20.webp",
+        "21.webp",
+        "22.webp",
+        "23.webp",
+        "24.webp",
+        "25.webp",
+    ];
+
+    const folderPath = "./res/images/Q2/";
+    const kicawkicawmania = new Audio('./res/audio/kicau.ogg');
+    
+    let scoreLeft = 0;
+    let scoreRight = 0;
+    let currentImageFilename = null;
+    let isAnimating = false;
+    
+    const imgElement = document.getElementById('random-image');
+    const leftLabel = document.getElementById('score-left');
+    const rightLabel = document.getElementById('score-right');
+    const pingDisplay = document.getElementById('ping-display');
+
+    let queue = [...images];
+    let done = [];
+    let pending = [];
+
+    // ===== COUNTDOWN TIMER =====
+    const TIMER_DURATION = 2 * 60; // 5 minutes in seconds
+    let timeRemaining = TIMER_DURATION;
+    let timerInterval = null;
+    let timerStarted = false;
+
+    const timerDisplayEl = document.getElementById('timer-display');
+    const timerFillEl = document.getElementById('timer-fill');
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function updateTimerUI() {
+        timerDisplayEl.textContent = formatTime(timeRemaining);
+        const pct = (timeRemaining / TIMER_DURATION) * 100;
+        timerFillEl.style.width = pct + '%';
+
+        const isWarning = timeRemaining <= 60;
+        timerDisplayEl.classList.toggle('warning', isWarning);
+        timerFillEl.classList.toggle('warning', isWarning);
+    }
+
+    function startTimer() {
+        if (timerStarted) return;
+        timerStarted = true;
+
+        timerInterval = setInterval(() => {
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerDisplayEl.textContent = '00:00';
+                timerFillEl.style.width = '0%';
+                timerDisplayEl.classList.add('warning');
+                timerFillEl.classList.add('warning');
+                kicawkicawmania.play();
+                return;
+            }
+            timeRemaining--;
+            updateTimerUI();
+        }, 1000);
+    }
+    
+    // Ping measurement
+    async function measurePing() {
+        const startTime = performance.now();
+        try {
+            const testImage = folderPath + queue[0];
+            await fetch(testImage, { method: 'HEAD', cache: 'no-cache', mode: 'no-cors' });
+            const ping = Math.round(performance.now() - startTime);
+            updatePingDisplay(ping);
+        } catch (error) {
+            measurePingWithImage();
+        }
+    }
+    
+    function measurePingWithImage() {
+        const startTime = performance.now();
+        const testImage = new Image();
+        testImage.onload = () => updatePingDisplay(Math.round(performance.now() - startTime));
+        testImage.onerror = () => updatePingDisplay(null);
+        testImage.src = folderPath + queue[0] + '?nocache=' + Date.now();
+    }
+    
+    function updatePingDisplay(ping) {
+        if (ping === null || ping === undefined) {
+            pingDisplay.innerHTML = "📡 PING: ERROR";
+            pingDisplay.className = "ping-indicator ping-bad";
+            return;
+        }
+        pingDisplay.innerHTML = `📡 PING: ${ping}ms`;
+        pingDisplay.className = ping < 100 ? "ping-indicator ping-good"
+                              : ping < 300 ? "ping-indicator ping-medium"
+                              : "ping-indicator ping-bad";
+        if (ping > 500) {
+            pingDisplay.style.animation = "shake 0.5s";
+            setTimeout(() => { pingDisplay.style.animation = ""; }, 500);
+        }
+    }
+
+    function startPingMonitor() {
+        measurePing();
+        setInterval(measurePing, 5000);
+    }
+    
+    window.addEventListener('online', measurePing);
+    window.addEventListener('offline', () => updatePingDisplay(null));
+    
+    // ===== GAME CODE =====
+    function randomize(type) {
+        return Math.floor(Math.random() * type.length);
+    }
+    
+    function animateScore(element) {
+        element.classList.remove('score-pop');
+        void element.offsetWidth;
+        element.classList.add('score-pop');
+        setTimeout(() => element.classList.remove('score-pop'), 300);
+    }
+    
+    function showRandomImage() {
+        let currArray = queue.length > 0 ? queue : pending.length > 0 ? pending : null;
+        if (!currArray) {
+            console.warn("No images left! Game Over");
+            kicawkicawmania.play();
+            return false;
+        }
+        
+        let random = randomize(currArray);
+        currentImageFilename = currArray[random];
+        imgElement.classList.remove('image-enter', 'image-fly-left', 'image-fly-right', 'image-fly-down');
+        imgElement.src = folderPath + currentImageFilename;
+        
+        setTimeout(() => {
+            imgElement.classList.add('image-enter');
+            setTimeout(() => imgElement.classList.remove('image-enter'), 300);
+        }, 10);
+        
+        console.log(`Now showing: ${currentImageFilename}`);
+        return true;
+    }
+    
+    function scoreCurrentImage(action, callback) {
+        if (!currentImageFilename) {
+            if (callback) callback(false);
+            return false;
+        }
+        
+        let sourceArray = null;
+        let imageIndex = queue.indexOf(currentImageFilename);
+        if (imageIndex !== -1) {
+            sourceArray = queue;
+        } else {
+            imageIndex = pending.indexOf(currentImageFilename);
+            if (imageIndex !== -1) sourceArray = pending;
+        }
+        
+        if (!sourceArray || imageIndex === -1) {
+            if (callback) callback(false);
+            return false;
+        }
+        
+        if (action === "left") {
+            imgElement.classList.add('image-fly-left');
+            setTimeout(() => {
+                scoreLeft++;
+                leftLabel.innerText = scoreLeft;
+                animateScore(leftLabel);
+                sourceArray.splice(imageIndex, 1);
+                done.push(currentImageFilename);
+                imgElement.classList.remove('image-fly-left');
+                if (callback) callback(true);
+            }, 400);
+        } 
+        else if (action === "right") {
+            imgElement.classList.add('image-fly-right');
+            setTimeout(() => {
+                scoreRight++;
+                rightLabel.innerText = scoreRight;
+                animateScore(rightLabel);
+                sourceArray.splice(imageIndex, 1);
+                done.push(currentImageFilename);
+                imgElement.classList.remove('image-fly-right');
+                if (callback) callback(true);
+            }, 400);
+        }
+        else if (action === "down") {
+            if (sourceArray === queue) {
+                imgElement.classList.add('image-fly-down');
+                setTimeout(() => {
+                    sourceArray.splice(imageIndex, 1);
+                    pending.push(currentImageFilename);
+                    imgElement.classList.remove('image-fly-down');
+                    if (callback) callback(true);
+                }, 400);
+            } else {
+                if (callback) callback(false);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    window.addEventListener('keydown', (e) => {
+        if (isAnimating) return;
+
+        // Start timer on first keypress
+        if (!timerStarted && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowDown")) {
+            startTimer();
+        }
+        
+        if (queue.length > 0 || pending.length > 0) {
+            if (e.key === "ArrowLeft") {
+                isAnimating = true;
+                scoreCurrentImage("left", (success) => {
+                    if (success) {
+                        showRandomImage();
+                        setTimeout(() => { isAnimating = false; }, 350);
+                    } else { isAnimating = false; }
+                });
+            } 
+            else if (e.key === "ArrowRight") {
+                isAnimating = true;
+                scoreCurrentImage("right", (success) => {
+                    if (success) {
+                        showRandomImage();
+                        setTimeout(() => { isAnimating = false; }, 350);
+                    } else { isAnimating = false; }
+                });
+            }
+            else if (e.key === "ArrowDown") {
+                isAnimating = true;
+                scoreCurrentImage("down", (success) => {
+                    if (success) {
+                        showRandomImage();
+                        setTimeout(() => { isAnimating = false; }, 350);
+                    } else { isAnimating = false; }
+                });
+            }
+        } else {
+            console.log("Game Over!");
+        }
+    });
+    
+    window.onload = () => {
+        showRandomImage();
+        startPingMonitor();
+        updateTimerUI();
+        console.log("Game started - Ping monitoring active");
+    };
+</script>
+
+</body>
+</html>

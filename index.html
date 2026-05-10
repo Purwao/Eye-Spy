@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EyeSpy</title>
-
+    <title>EyeSpy — Directory</title>
     <style>
         * {
             margin: 0;
@@ -19,211 +19,485 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1rem;
+            padding: 1.5rem;
+            overflow: hidden;
         }
 
-        .game-container {
-            display: grid;
-            grid-template-columns: 140px 1fr 140px;
-            gap: 1.5rem;
-            max-width: 1200px;
+        /* ===== WIPE OVERLAY ===== */
+        #wipe-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        #wipe-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 6px;
+            background: #f5d300;
+            transform-origin: top left;
+            transform: scaleY(0);
+            animation:
+                barGrow 1.3s linear 0.05s forwards,
+                barExpand 0.32s cubic-bezier(0.76, 0, 0.24, 1) 1.4s forwards,
+                barExit 0.42s cubic-bezier(0.76, 0, 0.24, 1) 1.8s forwards;
+        }
+
+        @keyframes barGrow {
+            0% {
+                transform: scaleY(0);
+                width: 6px;
+            }
+
+            100% {
+                transform: scaleY(1);
+                width: 6px;
+            }
+        }
+
+        @keyframes barExpand {
+            0% {
+                width: 6px;
+                left: 0;
+            }
+
+            100% {
+                width: 100vw;
+                left: 0;
+            }
+        }
+
+        @keyframes barExit {
+            0% {
+                left: 0;
+                width: 100vw;
+            }
+
+            100% {
+                left: 100vw;
+                width: 100vw;
+            }
+        }
+
+        #wipe-pct {
+            position: absolute;
+            left: 14px;
+            top: 0;
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #fff;
+            background: #000;
+            padding: 2px 6px;
+            line-height: 1.4;
+            opacity: 1;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            transform: translateY(-50%);
+        }
+
+        /* ===== PAGE ===== */
+        .page-wrapper {
+            max-width: 820px;
             width: 100%;
-            align-items: stretch;
+            opacity: 0;
+            animation: revealPage 0.38s ease forwards 2.0s;
         }
 
-        .receiver {
+        @keyframes revealPage {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== HEADER ===== */
+        .header {
             background: #fafaf7;
+            border: 3px solid #000;
+            padding: 1.5rem 2rem;
+            box-shadow: 10px 10px 0 #000;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .header-title {
+            font-weight: 900;
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+
+        .header-sub {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        .btn-instructions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: #000;
+            color: #fff;
+            border: 3px solid #000;
+            padding: 0.5rem 0.85rem;
+            font-family: monospace;
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            box-shadow: 3px 3px 0 #555;
+            transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn-instructions:hover {
+            background: #222;
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 #555;
+        }
+
+        .btn-instructions:active {
+            transform: translate(1px, 1px);
+            box-shadow: 2px 2px 0 #555;
+        }
+
+        .btn-instructions svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        /* ===== MODAL BACKDROP ===== */
+        #modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        #modal-backdrop.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #modal {
+            background: #fafaf7;
+            border: 3px solid #000;
+            box-shadow: 12px 12px 0 #000;
+            max-width: 640px;
+            width: 100%;
+            transform: translateY(16px);
+            transition: transform 0.22s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+
+        #modal-backdrop.open #modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 3px solid #000;
+            background: #000;
+            color: #fff;
+        }
+
+        .modal-title {
+            font-weight: 900;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-title svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .modal-close {
+            background: none;
+            border: 2px solid #fff;
+            color: #fff;
+            font-family: monospace;
+            font-weight: 900;
+            font-size: 0.9rem;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover {
+            background: #333;
+        }
+
+        .modal-body {
+            padding: 1.5rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .modal-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .modal-block-title {
+            font-size: 0.85rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .modal-block-text {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .modal-divider {
+            border: none;
+            border-top: 2px dashed #ccc;
+        }
+
+        /* ===== SECTIONS ===== */
+        .sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .section {
             border: 3px solid #000;
             padding: 1.5rem;
             box-shadow: 10px 10px 0 #000;
+            background: #fafaf7;
+        }
+
+        .section.checkered {
+            background-color: #e8e8e8;
+            background-image: repeating-conic-gradient(#d4d4d4 0% 25%, #fafaf7 0% 50%);
+            background-size: 22px 22px;
+        }
+
+        .section-header {
             display: flex;
-            flex-direction: column;
-        }
-
-        /* Ping indicator styles */
-        .ping-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #fff;
-            border: 2px solid #000;
-            padding: 5px 10px;
-            font-size: 12px;
-            font-weight: bold;
-            border-radius: 4px;
-            font-family: monospace;
-            z-index: 10;
-        }
-
-        .ping-good {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .ping-medium {
-            background: #FF9800;
-            color: white;
-        }
-
-        .ping-bad {
-            background: #f44336;
-            color: white;
-        }
-
-        .ping-measuring {
-            background: #9E9E9E;
-            color: white;
-        }
-
-        .title {
-            font-weight: 900;
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            margin-bottom: 1.5rem;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
             border-bottom: 3px solid #000;
-            padding-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
         }
 
-        .score-sidebar {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border: 3px solid #000;
+        .checkered .section-header {
+            background: #fafaf7;
+            margin: -1.5rem -1.5rem 1.25rem;
+            padding: 1rem 1.5rem 0.75rem;
+            border-bottom: 3px solid #000;
+        }
+
+        .section-tag {
+            background: #000;
             color: #fff;
-            padding: 1rem;
-            text-align: center;
+            font-size: 0.7rem;
             font-weight: 900;
             text-transform: uppercase;
+            padding: 3px 8px;
+            letter-spacing: 0.08em;
         }
 
-        .left-team { background: #e32a2a; box-shadow: -6px 8px 0 #000; }
-        .right-team { background: #0055ff; box-shadow: 6px 8px 0 #000; }
-
-        .score-label {
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-            line-height: 1.2;
+        .section-title {
+            font-weight: 900;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
-        .score-value {
-            font-size: 3.5rem;
-            display: block;
-        }
-
-        .display-container {
-            background: #fff;
-            border: 3px solid #000;
-            flex-grow: 1;
-            min-height: 500px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-        }
-
-        #random-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: all cubic-bezier(0.34, 1.2, 0.64, 1);
-        }
-
-        /* Animation classes */
-        .image-fly-left {
-            animation: flyToLeft 0.5s ease-in forwards !important;
-        }
-        
-        .image-fly-right {
-            animation: flyToRight 0.5s ease-in forwards !important;
-        }
-        
-        .image-fly-down {
-            animation: flyToDown 0.5s ease-in forwards !important;
-        }
-
-        @keyframes flyToLeft {
-            0% {
-                transform: translateX(0) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(-300px) rotate(-15deg);
-                opacity: 0;
-            }
-        }
-
-        @keyframes flyToRight {
-            0% {
-                transform: translateX(0) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(300px) rotate(15deg);
-                opacity: 0;
-            }
-        }
-
-        @keyframes flyToDown {
-            0% {
-                transform: translateY(0) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(200px) rotate(10deg);
-                opacity: 0;
-            }
-        }
-
-        .image-enter {
-            animation: imageEnter 0.3s ease-out forwards !important;
-        }
-
-        @keyframes imageEnter {
-            0% {
-                transform: scale(0.7);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .score-pop {
-            animation: scorePop 0.3s ease-out;
-        }
-
-        @keyframes scorePop {
-            0% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.3);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .hint {
-            text-align: center;
-            margin-top: 1rem;
-            font-weight: 800;
-            font-size: 0.8rem;
+        .section-count {
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #555;
             text-transform: uppercase;
         }
 
-        @media (max-width: 768px) {
-            .game-container {
+        .btn-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .btn-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .page-btn {
+            display: block;
+            text-decoration: none;
+            border: 3px solid #000;
+            padding: 1.25rem 1rem;
+            background: #fff;
+            color: #000;
+            font-family: monospace;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+            box-shadow: 5px 5px 0 #000;
+        }
+
+        .page-btn:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 8px 8px 0 #000;
+            background: #f0f0f0;
+        }
+
+        .page-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 #000;
+        }
+
+        .page-btn.red {
+            border-color: #e32a2a;
+            box-shadow: 5px 5px 0 #e32a2a;
+        }
+
+        .page-btn.red:hover {
+            box-shadow: 8px 8px 0 #e32a2a;
+        }
+
+        .page-btn.red:active {
+            box-shadow: 3px 3px 0 #e32a2a;
+        }
+
+        .page-btn.red .btn-number {
+            background: #e32a2a;
+        }
+
+        .page-btn.blue {
+            border-color: #0055ff;
+            box-shadow: 5px 5px 0 #0055ff;
+        }
+
+        .page-btn.blue:hover {
+            box-shadow: 8px 8px 0 #0055ff;
+        }
+
+        .page-btn.blue:active {
+            box-shadow: 3px 3px 0 #0055ff;
+        }
+
+        .page-btn.blue .btn-number {
+            background: #0055ff;
+        }
+
+        .btn-number {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 900;
+            padding: 2px 6px;
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-label {
+            display: block;
+            font-size: 1rem;
+            line-height: 1.1;
+        }
+
+        .btn-desc {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #888;
+            margin-top: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .btn-arrow {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.85rem;
+            font-size: 1rem;
+            opacity: 0.25;
+            transition: opacity 0.12s, transform 0.12s;
+        }
+
+        .page-btn:hover .btn-arrow {
+            opacity: 0.8;
+            transform: translate(2px, -2px);
+        }
+
+        .footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #aaa;
+            letter-spacing: 0.06em;
+        }
+
+        @media (max-width: 600px) {
+            .btn-grid-3 {
                 grid-template-columns: 1fr;
             }
-            .score-sidebar {
-                flex-direction: row;
-                justify-content: space-around;
+
+            .btn-grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .header-title {
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -231,344 +505,193 @@
 
 <body>
 
-<div class="game-container">
-    
-    <div class="score-sidebar left-team">
-        <div class="score-label">LEFT<br>TEAM<br>(←)</div>
-        <span id="score-left" class="score-value">0</span>
+    <!-- Wipe overlay -->
+    <div id="wipe-overlay">
+        <div id="wipe-bar"></div>
+        <div id="wipe-pct">0%</div>
     </div>
 
-    <div class="receiver">
-        <div class="title">
-            <span>Eye Spy</span>
-            <span style="font-size: 0.8rem;">Member Gathering</span>
-        </div>
-        <div class="ping-indicator" id="ping-display">
-            📡 PING: --ms
-        </div>
+    <!-- Modal -->
+    <div id="modal-backdrop">
+        <div id="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    How to Play
+                </div>
+                <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
 
-        <div class="display-container">
-            <img id="random-image" src="" alt="Loading Asset...">
+                <!-- =============================================
+                 EDIT YOUR CONTENT BELOW
+                 Each .modal-block is one paragraph/section.
+                 Add or remove blocks as needed.
+            ============================================= -->
+
+                <div class="modal-block">
+                    <div class="modal-block-title">Gameplay</div>
+                    <div class="modal-block-text">Peserta akan dibagi menjadi 2 kelompok untuk menebak gambar yang akan
+                        ditampilkan. masing-masing sesi berdurasi 2 menit.</div>
+                </div>
+
+                <hr class="modal-divider">
+
+                <div class="modal-block">
+                    <div class="modal-block-title">Controls</div>
+                    <div class="modal-block-text">Gunakan arrow kanan untuk memberi poin soal kepada tim kanan<br>
+                        Gunakan arrow  kiri untuk memberi poin soal ke tim kiri<br>
+                         Gunakan arrow bawah untuk pass, soal akan muncul kembali setelah pertanyaan yang tersisa telah dijawab</div>
+                </div>
+
+                <hr class="modal-divider">
+
+                <div class="modal-block">
+                    <div class="modal-block-title">Additional</div>
+                    <div class="modal-block-text">Web ini dibuat untuk memenuhi kebutuhan acara Member Gathering yang
+                        diselenggarakan GLC, Have fun! :D</div>
+                </div>
+
+                <!-- =============================================
+                 END EDITABLE CONTENT
+            ============================================= -->
+
+            </div>
         </div>
-        
-        <div class="hint">Use Arrow Keys to Categorize</div>
     </div>
 
-    <div class="score-sidebar right-team">
-        <div class="score-label">RIGHT<br>TEAM<br>(→)</div>
-        <span id="score-right" class="score-value">0</span>
+    <div class="page-wrapper">
+
+        <div class="header">
+            <div class="header-left">
+                <span class="header-title">Eye Spy</span>
+                <span class="header-sub">Member Gathering</span>
+            </div>
+            <button class="btn-instructions" id="open-modal" aria-label="Open instructions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                Instructions
+            </button>
+        </div>
+
+        <div class="sections">
+
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-tag"></span>
+                    <span class="section-title">Qualifier Rounds</span>
+                    <span class="section-count">3 sesi</span>
+                </div>
+                <div class="btn-grid-3">
+                    <a href="qualifier1.html" class="page-btn red">
+                        <span class="btn-number">01</span>
+                        <span class="btn-label">Qualifier one</span>
+                        <span class="btn-desc">Sesi 1</span>
+                        <span class="btn-arrow">↗</span>
+                    </a>
+                    <a href="qualifier2.html" class="page-btn red">
+                        <span class="btn-number">02</span>
+                        <span class="btn-label">Qualifier two</span>
+                        <span class="btn-desc">Sesi 2</span>
+                        <span class="btn-arrow">↗</span>
+                    </a>
+                    <a href="qualifier3.html" class="page-btn red">
+                        <span class="btn-number">03</span>
+                        <span class="btn-label">Qualifier three</span>
+                        <span class="btn-desc">Sesi 3</span>
+                        <span class="btn-arrow">↗</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="section checkered">
+                <div class="section-header">
+                    <span class="section-tag"></span>
+                    <span class="section-title">Final Rounds</span>
+                    <span class="section-count">2 sesi</span>
+                </div>
+                <div class="btn-grid-2">
+                    <a href="final1.html" class="page-btn blue">
+                        <span class="btn-number">01</span>
+                        <span class="btn-label">Final 1</span>
+                        <span class="btn-desc">Sesi 1</span>
+                        <span class="btn-arrow">↗</span>
+                    </a>
+                    <a href="final2.html" class="page-btn blue">
+                        <span class="btn-number">02</span>
+                        <span class="btn-label">Final 2</span>
+                        <span class="btn-desc">Sesi 2</span>
+                        <span class="btn-arrow">↗</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">Member Gathering</div>
+
     </div>
 
-</div>
+    <script>
+        // ===== WIPE ANIMATION =====
+        const pctEl = document.getElementById('wipe-pct');
+        const vh = window.innerHeight;
 
-<script>
-    // ===== PING MEASUREMENT SYSTEM =====
-    
-    const images = [
-        "1.webp",
-        "2.webp",
-        "3.webp",
-        "4.webp",
-        "5.webp",
-    ];
+        const growStart = 50;
+        const growDuration = 1300;
+        const expandStart = 1400;
 
-    const folderPath = "./images/";
-    const kicawkicawmania = new Audio('./audio/kicau.ogg');
-    
-    let scoreLeft = 0;
-    let scoreRight = 0;
-    let currentImageFilename = null;
-    let isAnimating = false;
-    
-    const imgElement = document.getElementById('random-image');
-    const leftLabel = document.getElementById('score-left');
-    const rightLabel = document.getElementById('score-right');
-    const pingDisplay = document.getElementById('ping-display');
-    
-    let queue = [...images];
-    let done = [];
-    let pending = [];
-    
-    // Ping measurement function
-    async function measurePing() {
-        const startTime = performance.now();
-        
-        try {
-            // Try to fetch a small file (the first image or a tiny file)
-            const testImage = folderPath + queue[0];
-            const response = await fetch(testImage, {
-                method: 'HEAD', // Only get headers, not the whole image
-                cache: 'no-cache',
-                mode: 'no-cors' // Avoid CORS issues
-            });
-            
-            const endTime = performance.now();
-            const ping = Math.round(endTime - startTime);
-            
-            updatePingDisplay(ping);
-            return ping;
-        } catch (error) {
-            // If fetch fails, try with image loading
-            measurePingWithImage();
-        }
-    }
-    
-    function measurePingWithImage() {
-        const startTime = performance.now();
-        const testImage = new Image();
-        const imgSrc = folderPath + queue[0];
-        
-        testImage.onload = () => {
-            const endTime = performance.now();
-            const ping = Math.round(endTime - startTime);
-            updatePingDisplay(ping);
-        };
-        
-        testImage.onerror = () => {
-            updatePingDisplay(null);
-        };
-        
-        testImage.src = imgSrc + '?nocache=' + Date.now();
-    }
-    
-    function updatePingDisplay(ping) {
-        const pingElement = document.getElementById('ping-display');
-        
-        if (ping === null || ping === undefined) {
-            pingElement.innerHTML = "📡 PING: ERROR";
-            pingElement.className = "ping-indicator ping-bad";
-            return;
-        }
-        
-        pingElement.innerHTML = `📡 PING: ${ping}ms`;
-        
-        // Color code based on ping
-        if (ping < 100) {
-            pingElement.className = "ping-indicator ping-good";
-        } else if (ping < 300) {
-            pingElement.className = "ping-indicator ping-medium";
-        } else {
-            pingElement.className = "ping-indicator ping-bad";
-        }
-        
-        // Show visual warning for high ping
-        if (ping > 500) {
-            pingElement.style.animation = "shake 0.5s";
-            setTimeout(() => {
-                pingElement.style.animation = "";
-            }, 500);
-        }
-    }
-    
-    // Add shake animation for high ping warning
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    // Measure ping every 5 seconds
-    function startPingMonitor() {
-        measurePing(); // Initial measurement
-        setInterval(() => {
-            measurePing();
-        }, 5000); // Check every 5 seconds
-    }
-    
-    // Monitor connection status
-    window.addEventListener('online', () => {
-        measurePing();
-    });
-    
-    window.addEventListener('offline', () => {
-        updatePingDisplay(null);
-    });
-    
-    // ===== ORIGINAL GAME CODE =====
-    function randomize(type) {
-        return Math.floor(Math.random() * type.length);
-    }
-    
-    function animateScore(element) {
-        element.classList.remove('score-pop');
-        void element.offsetWidth;
-        element.classList.add('score-pop');
-        setTimeout(() => {
-            element.classList.remove('score-pop');
-        }, 300);
-    }
-    
-    function showRandomImage() {
-        let currArray;
-        if (queue.length > 0) {
-            currArray = queue;
-        } else if (pending.length > 0) {
-            currArray = pending;
-        } else {
-            console.warn("No images left! Game Over");
-            kicawkicawmania.play();
-            return false;
-        }
-        
-        let random = randomize(currArray);
-        currentImageFilename = currArray[random];
-        let imgSrc = folderPath + currentImageFilename;
-        
-        imgElement.classList.remove('image-enter', 'image-fly-left', 'image-fly-right', 'image-fly-down');
-        
-        imgElement.src = imgSrc;
-        
-        setTimeout(() => {
-            imgElement.classList.add('image-enter');
-            setTimeout(() => {
-                imgElement.classList.remove('image-enter');
-            }, 300);
-        }, 10);
-        
-        console.log(`Now showing: ${currentImageFilename}`);
-        return true;
-    }
-    
-    function scoreCurrentImage(action, callback) {
-        if (!currentImageFilename) {
-            console.warn("No current image to score");
-            if (callback) callback(false);
-            return false;
-        }
-        
-        let sourceArray = null;
-        let imageIndex = -1;
-        
-        imageIndex = queue.indexOf(currentImageFilename);
-        if (imageIndex !== -1) {
-            sourceArray = queue;
-        } else {
-            imageIndex = pending.indexOf(currentImageFilename);
-            if (imageIndex !== -1) {
-                sourceArray = pending;
-            }
-        }
-        
-        if (!sourceArray || imageIndex === -1) {
-            console.warn("Current image not found in any array");
-            if (callback) callback(false);
-            return false;
-        }
-        
-        if (action === "left") {
-            imgElement.classList.add('image-fly-left');
-            
-            setTimeout(() => {
-                scoreLeft++;
-                leftLabel.innerText = scoreLeft;
-                animateScore(leftLabel);
-                sourceArray.splice(imageIndex, 1);
-                done.push(currentImageFilename);
-                console.log(`Left scored! ${currentImageFilename} moved to Done`);
-                imgElement.classList.remove('image-fly-left');
-                
-                if (callback) callback(true);
-            }, 400);
-        } 
-        else if (action === "right") {
-            imgElement.classList.add('image-fly-right');
-            
-            setTimeout(() => {
-                scoreRight++;
-                rightLabel.innerText = scoreRight;
-                animateScore(rightLabel);
-                sourceArray.splice(imageIndex, 1);
-                done.push(currentImageFilename);
-                console.log(`Right scored! ${currentImageFilename} moved to Done`);
-                imgElement.classList.remove('image-fly-right');
-                
-                if (callback) callback(true);
-            }, 400);
-        }
-        else if (action === "down") {
-            if (sourceArray === queue) {
-                imgElement.classList.add('image-fly-down');
-                
-                setTimeout(() => {
-                    sourceArray.splice(imageIndex, 1);
-                    pending.push(currentImageFilename);
-                    console.log(`Down pressed! ${currentImageFilename} moved to Pending`);
-                    imgElement.classList.remove('image-fly-down');
-                    
-                    if (callback) callback(true);
-                }, 400);
-            } else {
-                console.log("Can't move from pending to pending");
-                if (callback) callback(false);
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    window.addEventListener('keydown', (e) => {
-        if (isAnimating) return;
-        
-        if (queue.length > 0 || pending.length > 0) {
-            
-            if (e.key === "ArrowLeft") {
-                isAnimating = true;
-                scoreCurrentImage("left", (success) => {
-                    if (success) {
-                        showRandomImage();
-                        setTimeout(() => {
-                            isAnimating = false;
-                        }, 350);
-                    } else {
-                        isAnimating = false;
-                    }
-                });
-            } 
-            else if (e.key === "ArrowRight") {
-                isAnimating = true;
-                scoreCurrentImage("right", (success) => {
-                    if (success) {
-                        showRandomImage();
-                        setTimeout(() => {
-                            isAnimating = false;
-                        }, 350);
-                    } else {
-                        isAnimating = false;
-                    }
-                });
-            }
-            else if (e.key === "ArrowDown") {
-                isAnimating = true;
-                scoreCurrentImage("down", (success) => {
-                    if (success) {
-                        showRandomImage();
-                        setTimeout(() => {
-                            isAnimating = false;
-                        }, 350);
-                    } else {
-                        isAnimating = false;
-                    }
-                });
-            }
-        } else {
-            console.log("Game Over!");
-            
-            // alert(`Game Complete!\nLeft: ${scoreLeft} | Right: ${scoreRight}`);
-        }
-    });
-    
-    // Initialize
-    window.onload = () => {
-        showRandomImage();
-        startPingMonitor();
-        console.log("Game started - Ping monitoring active");
-    };
-</script>
+        const origin = performance.now();
 
+        function tick(now) {
+            const elapsed = now - origin;
+
+            if (elapsed < growStart) {
+                pctEl.style.top = '0px';
+                pctEl.textContent = '0%';
+                requestAnimationFrame(tick);
+                return;
+            }
+
+            if (elapsed >= expandStart) {
+                pctEl.style.opacity = '0';
+                return;
+            }
+
+            const t = Math.min(1, (elapsed - growStart) / growDuration);
+            const pct = Math.round(t * 100);
+            const y = Math.round(t * vh);
+
+            pctEl.textContent = pct + '%';
+            pctEl.style.top = y + 'px';
+
+            requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+
+        // ===== MODAL =====
+        const backdrop = document.getElementById('modal-backdrop');
+        const openBtn = document.getElementById('open-modal');
+        const closeBtn = document.getElementById('modal-close');
+
+        function openModal() { backdrop.classList.add('open'); }
+        function closeModal() { backdrop.classList.remove('open'); }
+
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    </script>
 </body>
+
 </html>
