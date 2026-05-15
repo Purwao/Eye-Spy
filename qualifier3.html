@@ -339,262 +339,240 @@
             "30.webp",
             "31.webp",
             "34.webp",
-            "35.webp",
             "36.webp",
             "37.webp",
             "41.webp",
-            "60.webp"
+            "46.webp",
+            "60.webp",
         ];
 
         const folderPath = "./res/images/Q3/";
         const kicawkicawmania = new Audio('./res/audio/kicau.ogg');
 
-        let scoreLeft = 0;
-        let scoreRight = 0;
-        let currentImageFilename = null;
-        let isAnimating = false;
+    let scoreLeft = 0;
+    let scoreRight = 0;
+    let currentImageFilename = null;
+    let isAnimating = false;
+    let audioUnlocked = false; // Important for browser permission
 
-        const imgElement = document.getElementById('random-image');
-        const leftLabel = document.getElementById('score-left');
-        const rightLabel = document.getElementById('score-right');
-        const pingDisplay = document.getElementById('ping-display');
+    const imgElement = document.getElementById('random-image');
+    const leftLabel = document.getElementById('score-left');
+    const rightLabel = document.getElementById('score-right');
+    const pingDisplay = document.getElementById('ping-display');
 
-        let queue = [...images];
-        let done = [];
-        let pending = [];
+    let queue = [...images];
+    let done = [];
+    let pending = [];
 
-        // ===== COUNTDOWN TIMER =====
-        const TIMER_DURATION = 2 * 60; // 5 minutes in seconds
-        let timeRemaining = TIMER_DURATION;
-        let timerInterval = null;
-        let timerStarted = false;
+    // ===== COUNTDOWN TIMER =====
+    const TIMER_DURATION = 2 * 60; // 2 minutes
+    let timeRemaining = TIMER_DURATION;
+    let timerInterval = null;
+    let timerStarted = false;
 
-        const timerDisplayEl = document.getElementById('timer-display');
-        const timerFillEl = document.getElementById('timer-fill');
+    const timerDisplayEl = document.getElementById('timer-display');
+    const timerFillEl = document.getElementById('timer-fill');
 
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
-        }
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
 
-        function updateTimerUI() {
-            timerDisplayEl.textContent = formatTime(timeRemaining);
-            const pct = (timeRemaining / TIMER_DURATION) * 100;
-            timerFillEl.style.width = pct + '%';
+    function updateTimerUI() {
+        timerDisplayEl.textContent = formatTime(timeRemaining);
+        const pct = (timeRemaining / TIMER_DURATION) * 100;
+        timerFillEl.style.width = pct + '%';
 
-            const isWarning = timeRemaining <= 60;
-            timerDisplayEl.classList.toggle('warning', isWarning);
-            timerFillEl.classList.toggle('warning', isWarning);
-        }
+        const isWarning = timeRemaining <= 60;
+        timerDisplayEl.classList.toggle('warning', isWarning);
+        timerFillEl.classList.toggle('warning', isWarning);
+    }
 
-        function startTimer() {
-            if (timerStarted) return;
-            timerStarted = true;
+    function startTimer() {
+        if (timerStarted) return;
+        timerStarted = true;
 
-            timerInterval = setInterval(() => {
-                if (timeRemaining <= 0) {
-                    clearInterval(timerInterval);
-                    timerDisplayEl.textContent = '00:00';
-                    timerFillEl.style.width = '0%';
-                    timerDisplayEl.classList.add('warning');
-                    timerFillEl.classList.add('warning');
-                    kicawkicawmania.play();
-                    return;
-                }
-                timeRemaining--;
-                updateTimerUI();
-            }, 1000);
-        }
-
-        // Ping measurement
-        async function measurePing() {
-            const startTime = performance.now();
-            try {
-                const testImage = folderPath + queue[0];
-                await fetch(testImage, { method: 'HEAD', cache: 'no-cache', mode: 'no-cors' });
-                const ping = Math.round(performance.now() - startTime);
-                updatePingDisplay(ping);
-            } catch (error) {
-                measurePingWithImage();
-            }
-        }
-
-        function measurePingWithImage() {
-            const startTime = performance.now();
-            const testImage = new Image();
-            testImage.onload = () => updatePingDisplay(Math.round(performance.now() - startTime));
-            testImage.onerror = () => updatePingDisplay(null);
-            testImage.src = folderPath + queue[0] + '?nocache=' + Date.now();
-        }
-
-        function updatePingDisplay(ping) {
-            if (ping === null || ping === undefined) {
-                pingDisplay.innerHTML = "📡 PING: ERROR";
-                pingDisplay.className = "ping-indicator ping-bad";
+        timerInterval = setInterval(() => {
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerDisplayEl.textContent = '00:00';
+                timerFillEl.style.width = '0%';
+                timerDisplayEl.classList.add('warning');
+                timerFillEl.classList.add('warning');
+                
+                // Play audio - will work because we unlock it on keydown
+                kicawkicawmania.play().catch(e => console.warn("Audio blocked by browser."));
                 return;
             }
-            pingDisplay.innerHTML = `📡 PING: ${ping}ms`;
-            pingDisplay.className = ping < 100 ? "ping-indicator ping-good"
-                : ping < 300 ? "ping-indicator ping-medium"
-                    : "ping-indicator ping-bad";
-            if (ping > 500) {
-                pingDisplay.style.animation = "shake 0.5s";
-                setTimeout(() => { pingDisplay.style.animation = ""; }, 500);
-            }
-        }
-
-        function startPingMonitor() {
-            measurePing();
-            setInterval(measurePing, 5000);
-        }
-
-        window.addEventListener('online', measurePing);
-        window.addEventListener('offline', () => updatePingDisplay(null));
-
-        // ===== GAME CODE =====
-        function randomize(type) {
-            return Math.floor(Math.random() * type.length);
-        }
-
-        function animateScore(element) {
-            element.classList.remove('score-pop');
-            void element.offsetWidth;
-            element.classList.add('score-pop');
-            setTimeout(() => element.classList.remove('score-pop'), 300);
-        }
-
-        function showRandomImage() {
-            let currArray = queue.length > 0 ? queue : pending.length > 0 ? pending : null;
-            if (!currArray) {
-                console.warn("No images left! Game Over");
-                kicawkicawmania.play();
-                return false;
-            }
-
-            let random = randomize(currArray);
-            currentImageFilename = currArray[random];
-            imgElement.classList.remove('image-enter', 'image-fly-left', 'image-fly-right', 'image-fly-down');
-            imgElement.src = folderPath + currentImageFilename;
-
-            setTimeout(() => {
-                imgElement.classList.add('image-enter');
-                setTimeout(() => imgElement.classList.remove('image-enter'), 300);
-            }, 10);
-
-            console.log(`Now showing: ${currentImageFilename}`);
-            return true;
-        }
-
-        function scoreCurrentImage(action, callback) {
-            if (!currentImageFilename) {
-                if (callback) callback(false);
-                return false;
-            }
-
-            let sourceArray = null;
-            let imageIndex = queue.indexOf(currentImageFilename);
-            if (imageIndex !== -1) {
-                sourceArray = queue;
-            } else {
-                imageIndex = pending.indexOf(currentImageFilename);
-                if (imageIndex !== -1) sourceArray = pending;
-            }
-
-            if (!sourceArray || imageIndex === -1) {
-                if (callback) callback(false);
-                return false;
-            }
-
-            if (action === "left") {
-                imgElement.classList.add('image-fly-left');
-                setTimeout(() => {
-                    scoreLeft++;
-                    leftLabel.innerText = scoreLeft;
-                    animateScore(leftLabel);
-                    sourceArray.splice(imageIndex, 1);
-                    done.push(currentImageFilename);
-                    imgElement.classList.remove('image-fly-left');
-                    if (callback) callback(true);
-                }, 400);
-            }
-            else if (action === "right") {
-                imgElement.classList.add('image-fly-right');
-                setTimeout(() => {
-                    scoreRight++;
-                    rightLabel.innerText = scoreRight;
-                    animateScore(rightLabel);
-                    sourceArray.splice(imageIndex, 1);
-                    done.push(currentImageFilename);
-                    imgElement.classList.remove('image-fly-right');
-                    if (callback) callback(true);
-                }, 400);
-            }
-            else if (action === "down") {
-                if (sourceArray === queue) {
-                    imgElement.classList.add('image-fly-down');
-                    setTimeout(() => {
-                        sourceArray.splice(imageIndex, 1);
-                        pending.push(currentImageFilename);
-                        imgElement.classList.remove('image-fly-down');
-                        if (callback) callback(true);
-                    }, 400);
-                } else {
-                    if (callback) callback(false);
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (isAnimating) return;
-
-            // Start timer on first keypress
-            if (!timerStarted && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowDown")) {
-                startTimer();
-            }
-
-            if (queue.length > 0 || pending.length > 0) {
-                if (e.key === "ArrowLeft") {
-                    isAnimating = true;
-                    scoreCurrentImage("left", (success) => {
-                        if (success) {
-                            showRandomImage();
-                            setTimeout(() => { isAnimating = false; }, 350);
-                        } else { isAnimating = false; }
-                    });
-                }
-                else if (e.key === "ArrowRight") {
-                    isAnimating = true;
-                    scoreCurrentImage("right", (success) => {
-                        if (success) {
-                            showRandomImage();
-                            setTimeout(() => { isAnimating = false; }, 350);
-                        } else { isAnimating = false; }
-                    });
-                }
-                else if (e.key === "ArrowDown") {
-                    isAnimating = true;
-                    scoreCurrentImage("down", (success) => {
-                        if (success) {
-                            showRandomImage();
-                            setTimeout(() => { isAnimating = false; }, 350);
-                        } else { isAnimating = false; }
-                    });
-                }
-            } else {
-                console.log("Game Over!");
-            }
-        });
-
-        window.onload = () => {
-            showRandomImage();
-            startPingMonitor();
+            timeRemaining--;
             updateTimerUI();
-            console.log("Game started - Ping monitoring active");
-        };
+        }, 1000);
+    }
+
+    // ===== PING MONITOR =====
+    async function measurePing() {
+        const startTime = performance.now();
+        try {
+            const testImage = folderPath + (queue[0] || images[0]);
+            await fetch(testImage, { method: 'HEAD', cache: 'no-cache', mode: 'no-cors' });
+            const ping = Math.round(performance.now() - startTime);
+            updatePingDisplay(ping);
+        } catch (error) {
+            measurePingWithImage();
+        }
+    }
+
+    function measurePingWithImage() {
+        const startTime = performance.now();
+        const testImage = new Image();
+        testImage.onload = () => updatePingDisplay(Math.round(performance.now() - startTime));
+        testImage.onerror = () => updatePingDisplay(null);
+        testImage.src = folderPath + (queue[0] || images[0]) + '?nocache=' + Date.now();
+    }
+
+    function updatePingDisplay(ping) {
+        if (ping === null) {
+            pingDisplay.innerHTML = "📡 PING: ERROR";
+            pingDisplay.className = "ping-indicator ping-bad";
+            return;
+        }
+        pingDisplay.innerHTML = `📡 PING: ${ping}ms`;
+        pingDisplay.className = ping < 100 ? "ping-indicator ping-good" : ping < 300 ? "ping-indicator ping-medium" : "ping-indicator ping-bad";
+    }
+
+    function startPingMonitor() {
+        measurePing();
+        setInterval(measurePing, 5000);
+    }
+
+    // ===== GAME LOGIC =====
+    function showRandomImage() {
+        let currArray = queue.length > 0 ? queue : pending.length > 0 ? pending : null;
+        if (!currArray) {
+            console.warn("No images left! Game Over");
+            kicawkicawmania.play().catch(e => {}); // Play sound on finish
+            return false;
+        }
+
+        let random = Math.floor(Math.random() * currArray.length);
+        currentImageFilename = currArray[random];
+        imgElement.classList.remove('image-enter', 'image-fly-left', 'image-fly-right', 'image-fly-down');
+        imgElement.src = folderPath + currentImageFilename;
+
+        setTimeout(() => {
+            imgElement.classList.add('image-enter');
+            setTimeout(() => imgElement.classList.remove('image-enter'), 300);
+        }, 10);
+        return true;
+    }
+
+    function scoreCurrentImage(action, callback) {
+        if (!currentImageFilename) return callback(false);
+
+        let sourceArray = queue.includes(currentImageFilename) ? queue : pending.includes(currentImageFilename) ? pending : null;
+        let imageIndex = sourceArray ? sourceArray.indexOf(currentImageFilename) : -1;
+
+        if (!sourceArray || imageIndex === -1) return callback(false);
+
+        const animClass = action === "left" ? "image-fly-left" : action === "right" ? "image-fly-right" : "image-fly-down";
+        imgElement.classList.add(animClass);
+
+        setTimeout(() => {
+            if (action === "left") {
+                scoreLeft++;
+                leftLabel.innerText = scoreLeft;
+                leftLabel.classList.add('score-pop');
+                setTimeout(() => leftLabel.classList.remove('score-pop'), 300);
+            } else if (action === "right") {
+                scoreRight++;
+                rightLabel.innerText = scoreRight;
+                rightLabel.classList.add('score-pop');
+                setTimeout(() => rightLabel.classList.remove('score-pop'), 300);
+            }
+
+            if (action === "down") {
+                sourceArray.splice(imageIndex, 1);
+                pending.push(currentImageFilename);
+            } else {
+                sourceArray.splice(imageIndex, 1);
+                done.push(currentImageFilename);
+            }
+
+            imgElement.classList.remove(animClass);
+            callback(true);
+        }, 400);
+    }
+
+    // ===== AUTOPLAY =====
+    let autoPlayInterval = null;
+    function startAutoPlay() {
+        if (autoPlayInterval) return;
+        if (!timerStarted) startTimer();
+        autoPlayInterval = setInterval(() => {
+            if (isAnimating) return;
+            const action = Math.random() > 0.5 ? "left" : "right";
+            if (queue.length > 0 || pending.length > 0) {
+                isAnimating = true;
+                scoreCurrentImage(action, (success) => {
+                    if (success) showRandomImage();
+                    setTimeout(() => { isAnimating = false; }, 350);
+                });
+            } else {
+                stopAutoPlay();
+            }
+        }, 2000);
+    }
+
+    function stopAutoPlay() {
+        clearInterval(autoPlayInterval);
+        autoPlayInterval = null;
+    }
+
+    // ===== INPUT HANDLER =====
+    window.addEventListener('keydown', (e) => {
+        // AUDIO UNLOCKER: This is the fix for your audio problem
+        if (!audioUnlocked) {
+            kicawkicawmania.play().then(() => {
+                kicawkicawmania.pause();
+                kicawkicawmania.currentTime = 0;
+                audioUnlocked = true;
+                console.log("Audio permission secured.");
+            }).catch(() => {});
+        }
+
+        if (e.key.toLowerCase() === 'a') {
+            autoPlayInterval ? stopAutoPlay() : startAutoPlay();
+            return;
+        }
+
+        if (isAnimating) return;
+
+        if (!timerStarted && ["ArrowLeft", "ArrowRight", "ArrowDown"].includes(e.key)) {
+            startTimer();
+        }
+
+        let action = null;
+        if (e.key === "ArrowLeft") action = "left";
+        else if (e.key === "ArrowRight") action = "right";
+        else if (e.key === "ArrowDown") action = "down";
+
+        if (action && (queue.length > 0 || pending.length > 0)) {
+            isAnimating = true;
+            scoreCurrentImage(action, (success) => {
+                if (success) {
+                    showRandomImage();
+                    setTimeout(() => { isAnimating = false; }, 350);
+                } else { isAnimating = false; }
+            });
+        }
+    });
+
+    window.onload = () => {
+        showRandomImage();
+        startPingMonitor();
+        updateTimerUI();
+    };
     </script>
 
 </body>
